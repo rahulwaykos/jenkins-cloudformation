@@ -7,7 +7,7 @@
      "Properties":{
         "DomainName":"jenkins-elastic",
         "ElasticsearchClusterConfig":{
-           "DedicatedMasterEnabled":"fale",
+           "DedicatedMasterEnabled":"false",
            "InstanceCount":"1",
            "ZoneAwarenessEnabled":"true",
            "InstanceType":"t3.medium.elasticsearch",
