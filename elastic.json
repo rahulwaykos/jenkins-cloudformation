@@ -10,7 +10,7 @@
            "DedicatedMasterEnabled":"false",
            "InstanceCount":"1",
            "ZoneAwarenessEnabled":"false",
-           "InstanceType":"t3.medium.elasticsearch",
+           "InstanceType":"t2.medium.elasticsearch",
         
         },
         "EBSOptions":{
