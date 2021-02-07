@@ -9,7 +9,7 @@
         "ElasticsearchClusterConfig":{
            "DedicatedMasterEnabled":"false",
            "InstanceCount":"1",
-           "ZoneAwarenessEnabled":"true",
+           "ZoneAwarenessEnabled":"false",
            "InstanceType":"t3.medium.elasticsearch",
         
         },
@@ -22,19 +22,7 @@
         "SnapshotOptions":{
            "AutomatedSnapshotStartHour":"0"
         },
-        "AccessPolicies":{
-           "Version":"2012-10-17",
-           "Statement":[
-              {
-                 "Effect":"Allow",
-                 "Principal":{
-                    "AWS":"arn:aws:iam::123456789012:user/es-user"
-                 },
-                 "Action":"es:*",
-                 "Resource":"arn:aws:es:us-east-1:123456789012:domain/test/*"
-              }
-           ]
-        },
+       
         "AdvancedOptions":{
            "rest.action.multi.allow_explicit_index":"true"
         } 
