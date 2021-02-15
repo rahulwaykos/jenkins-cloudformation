@@ -1,31 +1,140 @@
 ---
+Parameters:
+  DomainName:
+    Description: 'A name for the Amazon ES domain.'
+    Type: String
+    Default: "jenkins-es"
+  ElasticsearchVersion:
+    Description: 'Elasticsearch version'
+    Type: String
+    Default: '7.9'  
+  ClusterInstanceType:
+    Description: 'The instance type for your data nodes.'
+    Type: 'String'
+    Default: 't2.medium.elasticsearch'  
+  APIGatewayName:
+    Type: String
+    Default: 'jenkins-es-search'
+  
+
 Resourses:
-ElasticsearchDomain:
-  Type: AWS::Elasticsearch::Domain
-  Properties:
-    DomainName: "test-jenkins"
-    ElasticsearchClusterConfig:
-      DedicatedMasterEnabled: "true"
-      InstanceCount: "2"
-      ZoneAwarenessEnabled: "true"
-      InstanceType: "m3.medium.elasticsearch"
-      DedicatedMasterType: "m3.medium.elasticsearch"
-      DedicatedMasterCount: "3"
-    EBSOptions:
-      EBSEnabled: true
-      Iops: 0
-      VolumeSize: 20
-      VolumeType: "gp2"
-    SnapshotOptions:
-      AutomatedSnapshotStartHour: "0"
-    AccessPolicies:
-      Version: "2012-10-17"
-      Statement:
-        -
-          Effect: "Allow"
-          Principal:
-            AWS: "arn:aws:iam::123456789012:user/es-user"
-          Action: "es:*"
-          Resource: "arn:aws:es:us-east-1:846973539254:domain/test/*"
-    AdvancedOptions:
-      rest.action.multi.allow_explicit_index: "true"
+  ElasticsearchDomain:
+    Type: AWS::Elasticsearch::Domain
+    Properties:
+      DomainName: !Ref 'DomainName'
+      ElasticsearchVersion: !Ref 'ElasticsearchVersion'
+      ElasticsearchClusterConfig:
+        DedicatedMasterEnabled: "false"
+        InstanceCount: "1"
+        ZoneAwarenessEnabled: "false"
+        InstanceType: !Ref 'ClusterInstanceType'
+    
+      EBSOptions:
+        EBSEnabled: true
+        Iops: 0
+        VolumeSize: 20
+        VolumeType: "gp2"
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: "0"
+      AccessPolicies:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              AWS: "*"
+            Action: "es:*"
+            Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DomainName}/*'
+      AdvancedOptions:
+        rest.action.multi.allow_explicit_index: "true"
+      AdvancedSecurityOptionsInput:
+        Eanbled: "true"
+        MasterUserName: ctk
+        MasterUserPassword: Devops@123
+
+  search-lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.6
+      Role: arn:aws:iam::074793716255:role/service-role/test
+      Handler: ctk.handler
+      PackageType: Zip
+      Code:
+        S3Bucket: "search-es-lambda"
+        S3Key: "search-es-lambda-d483ce3a-1759-4cb6-bae2-80b1256a221d.zip"
+      
+
+
+
+
+
+  ApiGateway:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: !Ref APIGatewayName
+      Description: API for Storehouse mobile application
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+    APIGatewayRootMethod:
+      Type: "AWS::ApiGateway::Method"
+      Properties:
+        AuthorizationType: NONE
+        HttpMethod: GET
+        Integration:
+          IntegrationHttpMethod: ANY
+          Type: HTTP_PROXY
+          Uri: http://my-imaginary-bucket.s3-website-eu-west-1.amazonaws.com/
+          IntegrationResponses:
+            - StatusCode: 200
+        ResourceId: !GetAtt MobileAPI.RootResourceId
+        RestApiId: !Ref MobileAPI
+      Deployment:
+        DependsOn: 
+          - MobileAPI
+          - APIGatewayRootMethod
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref MobileAPI
+      Description: Storehouse Mobile API deployment
+      StageName: Prod
+  
+    StageStage:
+      Type: AWS::ApiGateway::Stage
+      Properties:
+        StageName: Stage
+        Description: Use Prod Stage
+        RestApiId: !Ref MobileAPI
+        DeploymentId: !Ref Deployment
+    Stack:
+      Type: 'AWS::ApiGateway::Resource'
+      Properties:
+        RestApiId: !Ref MobileAPI
+        ParentId: !GetAtt 
+          - MobileAPI
+          - RootResourceId
+        PathPart: stack
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: LakeNona-Lambda
+        AssumeRolePolicyDocument:
+          Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+          Version: 2012-10-17
+        Path: "/"
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+          - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+          - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+          - arn:aws:iam::aws:policy/AWSLambdaExecute
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        
+        
+
+
